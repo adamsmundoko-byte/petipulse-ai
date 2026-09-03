@@ -1,54 +1,78 @@
-
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Sign The Petition - Petipulse</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <style>
-    body { font-family: Arial; max-width: 600px; margin: 50px auto; background: #f9f9f9; padding: 20px; border-radius: 5px; }
-    h1 { color: #2563eb; text-align: center; }
-    .counter { text-align: center; font-size: 24px; font-weight: bold; color: #2563eb; margin: 20px 0; padding: 15px; background: white; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-    input, textarea { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box; font-size: 16px; }
-    button { background: #2563eb; color: white; padding: 14px 24px; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; width: 100%; font-weight: bold; }
-    button:hover { background: #1e40af; }
-    #status { margin-top: 15px; font-weight: bold; text-align: center; color: green; }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PetiPulse - Sign The Petition</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+body { font-family: system-ui; background: #0f172a; color: white; padding: 20px; max-width: 600px; margin: auto; }
+h1 { color: #22c55e; text-align: center; }
+.counter { font-size: 2.5em; font-weight: bold; color: #22c55e; text-align: center; display: block; }
+input, textarea { width: 100%; padding: 12px; margin: 8px 0; border-radius: 8px; border: 1px solid #334155; background: #1e293b; color: white; box-sizing: border-box; }
+button { width: 100%; padding: 14px; background: #22c55e; color: black; border: none; border-radius: 8px; font-weight: bold; font-size: 16px; cursor: pointer; }
+button:disabled { background: #475569; }
+.error { color: #f87171; }
+.success { color: #4ade80; }
+</style>
 </head>
 <body>
-  <h1>Sign The Petition</h1>
-  <p style="text-align:center">Add your name to support national development and progress. Together we build.</p>
 
-  <div class="counter" id="counter">Loading signatures...</div>
+<h1>Sign The Petition 🇿🇼</h1>
+<p><span id="count" class="counter">Loading...</span> People Have Signed</p>
 
-  <form id="petition-form">
-    <input type="text" id="name" placeholder="Your Full Name" required>
-    <input type="email" id="email" placeholder="Your Email" required>
-    <textarea id="message" placeholder="Why are you signing? - optional" rows="3"></textarea>
-    <button type="submit">Sign Petition</button>
-  </form>
+<form id="petitionForm">
+  <input type="text" id="name" placeholder="Full Name *" required>
+  <input type="email" id="email" placeholder="Email (optional)">
+  <input type="tel" id="phone" placeholder="WhatsApp Number +263... (optional)">
+  <textarea id="reason" placeholder="Why are you signing? (optional)" rows="3"></textarea>
+  <p id="msg"></p>
+  <button type="submit" id="btn">Sign Petition</button>
+</form>
 
-  <p id="status"></p>
+<script>
+const SUPABASE_URL = "https://cyldnghyjmlrebpzasjw.supabase.co" 
+const SUPABASE_KEY = "sb_publishable_f23k9yiRL5oD7i6JmoO2UA_RZNYCFe8"
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
 
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script>
-    const SUPABASE_URL = 'https://cyldnghymjirebpzasjw.supabase.co'
-    const SUPABASE_KEY = 'sb_publishable_f23k9yiRL5oD7i6JmoO2UA_RZNYvYb'
-    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
+async function loadCount() {
+  const { count } = await supabase.from('signatures').select('*', { count: 'exact', head: true })
+  document.getElementById('count').innerText = count || 0
+}
+loadCount()
 
-    async function loadCounter() {
-      const { count, error } = await supabase.from('signatures').select('*', { count: 'exact', head: true }).eq('petition_id', 1)
-      document.getElementById('counter').innerText = `${count || 0} People Have Signed`
-    }
+document.getElementById('petitionForm').addEventListener('submit', async (e) => {
+  e.preventDefault()
+  const btn = document.getElementById('btn')
+  const msg = document.getElementById('msg')
+  const name = document.getElementById('name').value
+  const email = document.getElementById('email').value
+  const phone = document.getElementById('phone').value
+  const reason = document.getElementById('reason').value
+  
+  if(!email && !phone) {
+    msg.innerHTML = '<p class="error">Please provide either Email or WhatsApp Number</p>'
+    return
+  }
+  
+  btn.disabled = true
+  btn.innerText = 'Signing...'
+  
+  const { error } = await supabase.from('signatures').insert([{ name, email, phone, reason }])
+  
+  if(error) {
+    msg.innerHTML = '<p class="error">Error: ' + error.message + '</p>'
+    btn.disabled = false
+    btn.innerText = 'Sign Petition'
+  } else {
+    msg.innerHTML = '<p class="success">Thank you for signing!</p>'
+    loadCount()
+    document.getElementById('petitionForm').reset()
+    btn.disabled = false
+    btn.innerText = 'Sign Petition'
+  }
+})
+</script>
 
-    document.getElementById('petition-form').addEventListener('submit', async (e) => {
-      e.preventDefault()
-      document.getElementById('status').innerText = 'Saving...'
-      const { error } = await supabase.from('signatures').insert([{ petition_id: 1, name: document.getElementById('name').value, email: document.getElementById('email').value, message: document.getElementById('message').value }])
-      document.getElementById('status').innerText = error ? 'Error: ' + error.message : 'Thank you! Your signature was recorded.'
-      if(!error) { e.target.reset(); loadCounter() }
-    })
-
-    loadCounter()
-  </script>
 </body>
 </html>
